@@ -124,6 +124,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--specific-address", type=str, required=False)
     parser.add_argument("--print-only", action="store_true", required=False)
+    parser.add_argument("--force-run", action="store_true", required=False)
     args = parser.parse_args()
 
     load_dotenv()
@@ -147,6 +148,20 @@ def main():
         scouted_location = api.scout_location(args.specific_address, work_locations, -1, "???")
         print(scouted_location)
     else:
+        if not args.force_run:
+            with open("last_run_date.txt", "r") as f:
+                last_run_date_str = f.readlines()[0].strip()
+        
+            last_run_date = datetime.strptime(last_run_date_str, "%Y-%m-%d")
+            time_since_last_run = datetime.now().date() - last_run_date.date()
+            if time_since_last_run < timedelta(days=1):
+                print(f"Already ran today, skipping.")
+                exit(0)
+            print("Hasn't run for a day, running again.")
+
+            with open("last_run_date.txt", "w") as f:
+                f.write(datetime.now().strftime("%Y-%m-%d"))
+
         # Retrieve the last day of emails from the email client
         client = EmailClient("otto.white.apps@gmail.com")
         messages = client.get_recent_messages(1)
