@@ -19,9 +19,9 @@ class EmailClient:
             print("GMAIL_APP_PASSWORD is not set")
             raise Exception("GMAIL_APP_PASSWORD is not set")
 
-        self.gmail_service = self._gmail_authenticate()
-
         self.yag = yagmail.SMTP(email, os.getenv("GMAIL_APP_PASSWORD"))
+
+        self.gmail_service = self._gmail_authenticate()
     
     def send_email(self, to, subject, contents):
         try:
@@ -48,6 +48,11 @@ class EmailClient:
         SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
         if not google_token_file.exists():
             print("No token file found, running auth flow")
+            self.send_email(
+                to="otto.white20@imperial.ac.uk",
+                subject="Sign in to otto.white.apps@gmail.com on komodo01!",
+                contents="Auth flow can't run otherwise"
+            )
             creds = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES).run_local_server(port=0)
             with open(google_token_file, 'wb') as token:
                 pickle.dump(creds, token)
@@ -58,6 +63,11 @@ class EmailClient:
             
             if not creds.valid:
                 print("Token is invalid, running auth flow")
+                self.send_email(
+                    to="otto.white20@imperial.ac.uk",
+                    subject="Sign in to otto.white.apps@gmail.com on komodo01!",
+                    contents="Auth flow can't run otherwise"
+                )
                 creds = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES).run_local_server(port=0)
                 with open(google_token_file, 'wb') as token:
                     pickle.dump(creds, token)
