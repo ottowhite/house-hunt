@@ -46,12 +46,6 @@ class EmailClient:
     def _gmail_authenticate(self):
         google_token_file = pathlib.Path("token.pickle")
         if not google_token_file.exists():
-            print("No token file found, running auth flow")
-            self.send_email(
-                to="otto.white20@imperial.ac.uk",
-                subject="otto.white.apps@gmail.com credentials token not present komodo01!",
-                contents="Auth flow can't run otherwise"
-            )
             creds = self.oauth_authenticate()
             with open(google_token_file, 'wb') as token:
                 pickle.dump(creds, token)
@@ -61,11 +55,6 @@ class EmailClient:
                 creds = pickle.load(token)
             
             if not creds.valid:
-                self.send_email(
-                    to="otto.white20@imperial.ac.uk",
-                    subject="otto.white.apps@gmail.com credentials token invalid on komodo01!",
-                    contents="Auth flow can't run otherwise"
-                )
                 creds = self.oauth_authenticate()
                 with open(google_token_file, 'wb') as token:
                     pickle.dump(creds, token)
