@@ -157,6 +157,7 @@ def main():
         scouted_locations = ""
         for address, price_per_month, link in properties:
             if address in seen_addresses:
+                print(f"Skipping {address} because it has already been processed.")
                 continue
             seen_addresses.add(address)
 

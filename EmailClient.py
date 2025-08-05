@@ -42,7 +42,7 @@ class EmailClient:
     # https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/get?utm_source=chatgpt.com
     def get_recent_messages(self, days):
         # Use "to:me" to only get messages received by me (not sent)
-        query = f'newer_than:{days}d to:me'
+        query = f'newer_than:{days}d to:whiteotto4@gmail.com'
         return self.gmail_service.users().messages().list(userId='me', q=query, maxResults=50).execute().get('messages', [])
 
     def _gmail_authenticate(self):

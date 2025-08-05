@@ -14,7 +14,10 @@ def extract_properties_from_messages(messages, client):
                 subject = header["value"]
 
         if "southern superpolygon" not in subject.lower():
+            print("Skipping email", subject)
             continue
+        else:
+            print("Found new email", subject)
 
         raw = email_raw["raw"]
         bytes_raw = base64.urlsafe_b64decode(raw)
@@ -38,24 +41,24 @@ def extract_properties_from_messages(messages, client):
         tables = soup.find_all("table", cellspacing="0", cellpadding="0")
         found_count = 0
         for table in tables:
-            spans = table.find_all("span")
+            divs = table.find_all("div")
             links = table.find_all("a")
-            for span in spans:
-                if "pcm" in span.text.lower():
-                    price_per_month = span.text
+            for div in divs:
+                if "pcm" in div.text.lower():
+                    price_per_month = div.text
                     # Remove the pound sign from the start, the comma, and pcm, and just get the int
                     price_per_month = int(price_per_month.replace("£", "").replace(",", "").replace("pcm", "").strip())
                 else:
                     continue
-                
-                curr = span
+
+                curr = div
                 while curr.find_all_next("a") == []:
                     curr = curr.parent
                 link = curr.find_all_next("a")[0]["href"]
 
-                while curr.find_all_next("div") == []:
+                while curr.find_all_next("tr") == []:
                     curr = curr.parent
-                address = curr.find_all_next("div")[1].text
+                address = curr.find_all_next("tr")[1].text.strip()
 
                 results.add((address, price_per_month, link))
     
