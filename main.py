@@ -166,10 +166,13 @@ def main():
             print(scouted_locations)
         else:
             todays_date = datetime.now().strftime("%Y/%m/%d")
-            client.send_email_multiple_recipients(
-                ["otto.white20@imperial.ac.uk"],
-                f"Potential new houses {todays_date}",
-                scouted_locations)
+            if scouted_locations == "":
+                print("No new houses found")
+            else:
+                client.send_email_multiple_recipients(
+                    ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
+                    f"Potential new houses {todays_date}",
+                    scouted_locations)
 
 
 if __name__ == "__main__":
