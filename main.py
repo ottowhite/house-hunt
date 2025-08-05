@@ -159,8 +159,6 @@ def main():
                 exit(0)
             print("Hasn't run for a day, running again.")
 
-            with open("last_run_date.txt", "w") as f:
-                f.write(datetime.now().strftime("%Y-%m-%d"))
 
         # Retrieve the last day of emails from the email client
         client = EmailClient("otto.white.apps@gmail.com")
@@ -189,6 +187,10 @@ def main():
                     ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
                     f"Potential new houses {todays_date}",
                     scouted_locations)
+
+            # Only prevent more runs if we have already sent an email
+            with open("last_run_date.txt", "w") as f:
+                f.write(datetime.now().strftime("%Y-%m-%d"))
 
 
 if __name__ == "__main__":
