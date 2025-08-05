@@ -5,6 +5,10 @@ from email_extractor import extract_properties_from_messages
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, date, time
 import os
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 class GoogleApi:
     def __init__(self, api_key):
@@ -146,7 +150,7 @@ def main():
 
     if args.specific_address:
         scouted_location = api.scout_location(args.specific_address, work_locations, -1, "???")
-        print(scouted_location)
+        logger.info(scouted_location)
     else:
         if not args.force_run:
             with open("last_run_date.txt", "r") as f:
@@ -155,9 +159,9 @@ def main():
             last_run_date = datetime.strptime(last_run_date_str, "%Y-%m-%d")
             time_since_last_run = datetime.now().date() - last_run_date.date()
             if time_since_last_run < timedelta(days=1):
-                print(f"Already ran today, skipping.")
+                logger.info(f"Already ran today, skipping.")
                 exit(0)
-            print("Hasn't run for a day, running again.")
+            logger.info("Hasn't run for a day, running again.")
 
 
         # Retrieve the last day of emails from the email client
@@ -170,7 +174,7 @@ def main():
         scouted_locations = ""
         for address, price_per_month, link in properties:
             if address in seen_addresses:
-                print(f"Skipping {address} because it has already been processed.")
+                logger.info(f"Skipping {address} because it has already been processed.")
                 continue
             seen_addresses.add(address)
 
@@ -181,7 +185,7 @@ def main():
         else:
             todays_date = datetime.now().strftime("%Y/%m/%d")
             if scouted_locations == "":
-                print("No new houses found")
+                logger.info("No new houses found")
             else:
                 client.send_email_multiple_recipients(
                     ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
