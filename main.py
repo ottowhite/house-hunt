@@ -54,8 +54,8 @@ class GoogleApi:
 
         return minutes, distance_km
     
-    def print_commutes(self, home_address, work_locations):
-        print("--------------- COMMUTES -----------------")
+    def get_commutes_string(self, home_address, work_locations):
+        string = "--------------- COMMUTES -----------------\n"
         transport_mode_pretty = {"BICYCLE": "cycle", "DRIVE": "drive", "WALK": "walk", "TRANSIT": "public transport"}
         for destination_location, transport_mode, name, maximum_transport_time in work_locations:
             minutes_to_travel, _ = self.get_travel_time_and_distance(home_address, destination_location, transport_mode)
@@ -64,16 +64,18 @@ class GoogleApi:
             padded_transport_mode = self.pad_string(f"({transport_mode_pretty[transport_mode]}):", 20)
 
             if minutes_to_travel <= maximum_transport_time:
-                print(f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes")
+                string += f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes\n"
             else:
                 extra_minutes = minutes_to_travel - maximum_transport_time
                 transport_mode_verb = {"BICYCLE": "cycling", "DRIVE": "driving", "WALK": "walking", "TRANSIT": "on public transport"}
-                print(f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes ({extra_minutes} extra minutes {transport_mode_verb[transport_mode]})")
+                string += f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes ({extra_minutes} extra minutes {transport_mode_verb[transport_mode]})\n"
+            
+        string += "\n"
         
-        print()
+        return string
     
-    def print_nearest_shops(self, home_address):
-        print("--------------- NEAREST SHOPS -----------------")
+    def get_nearest_shops_string(self, home_address):
+        string = "--------------- NEAREST SHOPS -----------------\n"
         shops = self.get_places(f"Shops and supermarkets near {home_address}")
         max_shop_name_length = max(len(shop['displayName']['text']) for shop in shops[:5])
 
@@ -86,28 +88,32 @@ class GoogleApi:
 
         for shop_name, minutes_to_walk, distance_km in shops_to_print:
             padded_shop_name = self.pad_string(shop_name + ":", max_shop_name_length + 1)
-            print(f"{padded_shop_name}{minutes_to_walk:>3} minutes ({distance_km:.1f}km)")
+            string += f"{padded_shop_name}{minutes_to_walk:>3} minutes ({distance_km:.1f}km)\n"
+        
+        string += "\n"
 
-        print()
+        return string
     
     def get_google_maps_link(self, address):
         address = address.replace(" ", "+")
         return f"https://www.google.com/maps/search/{address}"
     
     def scout_location(self, new_house_address, work_locations, price_per_month, link):
-        print("-------------- ADDRESS ------------------")
-        print(new_house_address)
-        print()
-        print("Google Maps: " + self.get_google_maps_link(new_house_address))
-        print("Rightmove: " + link)
-        print()
-        print("-------------- PRICE PER MONTH ------------------")
-        print("Price per month: " + str(price_per_month))
-        print()
-        self.print_commutes(new_house_address, work_locations)
-        self.print_nearest_shops(new_house_address)
-        print()
-        print()
+        string = ""
+        string += "-------------- ADDRESS ------------------\n"
+        string += new_house_address + "\n"
+        string += "\n"
+        string += "Google Maps: " + self.get_google_maps_link(new_house_address) + "\n"
+        string += "Rightmove: " + link + "\n"
+        string += "\n"
+        string += "-------------- PRICE PER MONTH ------------------\n"
+        string += "Price per month: " + str(price_per_month) + "\n"
+        string += "\n"
+        string += self.get_commutes_string(new_house_address, work_locations)
+        string += self.get_nearest_shops_string(new_house_address)
+        string += "\n"
+        string += "\n"
+        return string
     
     @staticmethod
     def pad_string(string, length):
@@ -116,7 +122,7 @@ class GoogleApi:
 def main():
     # add argument for new address
     parser = argparse.ArgumentParser()
-    parser.add_argument("--new-address", type=str, required=False)
+    parser.add_argument("--specific-address", type=str, required=False)
     args = parser.parse_args()
 
     load_dotenv()
@@ -127,9 +133,6 @@ def main():
     pdt_address = "119, 121 Cannon St, London EC4N 5AT"
     imperial_address = "Exhibition Rd, South Kensington, London SW7 2AZ"
     symbolica_address = "66 City Rd, London EC1Y 1BD"
-    current_house_address = "14a Stockwell Park Road, London, SW9 0AJ"
-
-    new_house_address = args.new_address if args.new_address else current_house_address
 
     work_locations = [
         (pdt_address, "TRANSIT", "Robbie", 30),
@@ -139,17 +142,30 @@ def main():
         (symbolica_address, "TRANSIT", "Charlie", 30)
     ]
 
-    client = EmailClient("otto.white.apps@gmail.com")
-    messages = client.get_recent_messages(1)
-    properties = extract_properties_from_messages(messages, client)
-    seen_addresses = set()
+    if args.specific_address:
+        scouted_location = api.scout_location(args.specific_address, work_locations, -1, "???")
+        print(scouted_location)
+    else:
+        # Retrieve the last day of emails from the email client
+        client = EmailClient("otto.white.apps@gmail.com")
+        messages = client.get_recent_messages(1)
+        properties = extract_properties_from_messages(messages, client)
+        seen_addresses = set()
 
-    for address, price_per_month, link in properties:
-        if address in seen_addresses:
-            continue
-        seen_addresses.add(address)
+		# Scout each location on a rightmove email
+        scouted_locations = ""
+        for address, price_per_month, link in properties:
+            if address in seen_addresses:
+                continue
+            seen_addresses.add(address)
 
-        api.scout_location(address, work_locations, price_per_month, link)
+            scouted_locations += api.scout_location(address, work_locations, price_per_month, link)
+
+        todays_date = datetime.now().strftime("%m/%d")
+        client.send_email_multiple_recipients(
+            ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
+            f"Potential new houses {todays_date}",
+            scouted_locations)
 
 
 if __name__ == "__main__":
