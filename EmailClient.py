@@ -50,7 +50,7 @@ class EmailClient:
             print("No token file found, running auth flow")
             self.send_email(
                 to="otto.white20@imperial.ac.uk",
-                subject="Sign in to otto.white.apps@gmail.com on komodo01!",
+                subject="otto.white.apps@gmail.com credentials token not present komodo01!",
                 contents="Auth flow can't run otherwise"
             )
             creds = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES).run_local_server(port=0)
@@ -62,10 +62,9 @@ class EmailClient:
                 creds = pickle.load(token)
             
             if not creds.valid:
-                print("Token is invalid, running auth flow")
                 self.send_email(
                     to="otto.white20@imperial.ac.uk",
-                    subject="Sign in to otto.white.apps@gmail.com on komodo01!",
+                    subject="otto.white.apps@gmail.com credentials token invalid on komodo01!",
                     contents="Auth flow can't run otherwise"
                 )
                 creds = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES).run_local_server(port=0)
