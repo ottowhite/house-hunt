@@ -7,8 +7,8 @@ from datetime import datetime, timedelta
 import os
 import logging
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 class GoogleApi:
     def __init__(self, api_key):
@@ -159,7 +159,7 @@ def main():
             last_run_date = datetime.strptime(last_run_date_str, "%Y-%m-%d")
             time_since_last_run = datetime.now().date() - last_run_date.date()
             if time_since_last_run < timedelta(days=1):
-                logger.info(f"Already ran today, skipping.")
+                logger.info("Already ran today, skipping.")
                 exit(0)
             logger.info("Hasn't run for a day, running again.")
 

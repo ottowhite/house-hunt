@@ -7,16 +7,20 @@ from googleapiclient.discovery import build
 import os
 import pathlib
 from email_extractor import extract_properties_from_messages
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class EmailClient:
     def __init__(self, email):
         load_dotenv()
-        print(f"Initialising email sender for {email}")
+        logger.info(f"Initialising email sender for {email}")
 
         self.email = email
 
         if os.getenv("GMAIL_APP_PASSWORD") is None:
-            print("GMAIL_APP_PASSWORD is not set")
+            logger.error("GMAIL_APP_PASSWORD is not set")
             raise Exception("GMAIL_APP_PASSWORD is not set")
 
         self.yag = yagmail.SMTP(email, os.getenv("GMAIL_APP_PASSWORD"))
@@ -31,9 +35,9 @@ class EmailClient:
                 contents=contents
             )
         except smtplib.SMTPAuthenticationError as e:
-            print(f"Incorrect gmail app password for {self.email}")
+            logger.error(f"Incorrect gmail app password for {self.email}")
         except Exception as e:
-            print(f"Error sending email to {to}: {e}")
+            logger.error(f"Error sending email to {to}: {e}")
     
     def send_email_multiple_recipients(self, recipients, subject, contents):
         for recipient in recipients:
@@ -48,18 +52,23 @@ class EmailClient:
     def _gmail_authenticate(self):
         google_token_file = pathlib.Path("token.pickle")
         if not google_token_file.exists():
+            logger.info("No gmail token file found, creating new one")
             creds = self.oauth_authenticate()
             with open(google_token_file, 'wb') as token:
                 pickle.dump(creds, token)
         else:
-            print("Using existing token file")
+            logger.info("Using existing gmail token file")
             with open(google_token_file, 'rb') as token:
                 creds = pickle.load(token)
             
             if not creds.valid:
+                logger.info("Gmail token is invalid (likely expired), creating new one")
                 creds = self.oauth_authenticate()
                 with open(google_token_file, 'wb') as token:
                     pickle.dump(creds, token)
+        
+        if not creds.valid:
+            logger.error("Gmail token is still invalid after attempting load, creating new one")
 
         return build('gmail', 'v1', credentials=creds)
     

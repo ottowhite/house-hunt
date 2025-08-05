@@ -1,6 +1,10 @@
 import email
 import base64
 from bs4 import BeautifulSoup
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 def extract_properties_from_messages(messages, client):
     results = set()
@@ -14,10 +18,10 @@ def extract_properties_from_messages(messages, client):
                 subject = header["value"]
 
         if "southern superpolygon" not in subject.lower():
-            print("Skipping email", subject)
+            logger.info(f"Skipping email {subject}")
             continue
         else:
-            print("Found new email", subject)
+            logger.info(f"Found new email {subject}")
 
         raw = email_raw["raw"]
         bytes_raw = base64.urlsafe_b64decode(raw)
@@ -31,9 +35,9 @@ def extract_properties_from_messages(messages, client):
                     charset = part.get_content_charset() or "utf-8"
                     htmls.append(html_bytes.decode(charset, "replace"))
                 else:
-                    print(f"Warning: {ctype}")
+                    logger.warning(f"Warning: {ctype}")
         else:
-            print("Warning: not multipart")
+            logger.warning("Warning: not multipart")
 
         assert len(htmls) == 1
         html = htmls[0]
