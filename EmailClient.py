@@ -66,7 +66,7 @@ class EmailClient:
     def oauth_authenticate(self):
         SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
         flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
-        creds = flow.run_local_server(port=0, open_browser=False, email_client=self)
+        creds = flow.run_local_server(port=0, open_browser=True, email_client=self, timeout=30)
         return creds
 
 if __name__ == "__main__":
