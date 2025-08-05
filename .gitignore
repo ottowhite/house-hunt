@@ -1,3 +1,5 @@
 .env
 credentials.json
 token.pickle
+cron.log
+__pycache__/
