@@ -3,12 +3,12 @@ import argparse
 from EmailClient import EmailClient
 from email_extractor import extract_properties_from_messages
 from dotenv import load_dotenv
-from datetime import datetime, timedelta, date, time
+from datetime import datetime, timedelta
 import os
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
 
 class GoogleApi:
     def __init__(self, api_key):
