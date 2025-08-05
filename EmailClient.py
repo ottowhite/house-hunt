@@ -42,10 +42,9 @@ class EmailClient:
     # https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/get?utm_source=chatgpt.com
     def get_recent_messages(self, days):
         return self.gmail_service.users().messages().list(userId='me', q=f'newer_than:{days}d', maxResults=50).execute()['messages']
-    
+
     def _gmail_authenticate(self):
-        google_token_file = pathlib.Path("token.pickle")          # or token.json – your choice
-        SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+        google_token_file = pathlib.Path("token.pickle")
         if not google_token_file.exists():
             print("No token file found, running auth flow")
             self.send_email(
@@ -53,7 +52,7 @@ class EmailClient:
                 subject="otto.white.apps@gmail.com credentials token not present komodo01!",
                 contents="Auth flow can't run otherwise"
             )
-            creds = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES).run_local_server(port=0)
+            creds = self.oauth_authenticate()
             with open(google_token_file, 'wb') as token:
                 pickle.dump(creds, token)
         else:
@@ -67,11 +66,17 @@ class EmailClient:
                     subject="otto.white.apps@gmail.com credentials token invalid on komodo01!",
                     contents="Auth flow can't run otherwise"
                 )
-                creds = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES).run_local_server(port=0)
+                creds = self.oauth_authenticate()
                 with open(google_token_file, 'wb') as token:
                     pickle.dump(creds, token)
 
         return build('gmail', 'v1', credentials=creds)
+    
+    def oauth_authenticate(self):
+        SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+        flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
+        creds = flow.run_local_server(port=0, open_browser=False, email_client=self)
+        return creds
 
 if __name__ == "__main__":
     client = EmailClient("otto.white.apps@gmail.com")
