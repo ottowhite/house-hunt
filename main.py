@@ -163,7 +163,7 @@ def main():
 
         todays_date = datetime.now().strftime("%m/%d")
         client.send_email_multiple_recipients(
-            ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
+            ["otto.white20@imperial.ac.uk"],
             f"Potential new houses {todays_date}",
             scouted_locations)
 
