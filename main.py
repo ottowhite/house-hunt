@@ -3,7 +3,7 @@ import argparse
 from EmailClient import EmailClient
 from email_extractor import extract_properties_from_messages
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 import os
 
 class GoogleApi:
@@ -29,9 +29,9 @@ class GoogleApi:
         # Transit is public transport
         assert transport_mode in ["BICYCLE", "DRIVE", "WALK", "TRANSIT"], "Invalid transport mode"
 
-        next_monday_morning = datetime.now() + timedelta(days=(1 - datetime.now().weekday()) % 7)
-        next_monday_morning = next_monday_morning.replace(hour=8, minute=0, second=0, microsecond=0)
-        departure_time = next_monday_morning.isoformat() + "Z"
+        next_monday_datetime = datetime.now() + timedelta(days=(7 - datetime.now().weekday()))
+        next_monday_datetime = next_monday_datetime.replace(hour=8, minute=0, second=0, microsecond=0)
+        departure_time = next_monday_datetime.isoformat() + "Z"
 
         data = {
             "origin": {
@@ -123,6 +123,7 @@ def main():
     # add argument for new address
     parser = argparse.ArgumentParser()
     parser.add_argument("--specific-address", type=str, required=False)
+    parser.add_argument("--print-only", action="store_true", required=False)
     args = parser.parse_args()
 
     load_dotenv()
@@ -161,11 +162,14 @@ def main():
 
             scouted_locations += api.scout_location(address, work_locations, price_per_month, link)
 
-        todays_date = datetime.now().strftime("%m/%d")
-        client.send_email_multiple_recipients(
-            ["otto.white20@imperial.ac.uk"],
-            f"Potential new houses {todays_date}",
-            scouted_locations)
+        if args.print_only:
+            print(scouted_locations)
+        else:
+            todays_date = datetime.now().strftime("%Y/%m/%d")
+            client.send_email_multiple_recipients(
+                ["otto.white20@imperial.ac.uk"],
+                f"Potential new houses {todays_date}",
+                scouted_locations)
 
 
 if __name__ == "__main__":
