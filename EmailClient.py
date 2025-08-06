@@ -41,7 +41,8 @@ class EmailClient:
     
     def send_email_multiple_recipients(self, recipients, subject, contents):
         for recipient in recipients:
-            self.send_email(recipient, subject, contents)
+            contents_preseved = "<pre>\n" + contents + "\n</pre>"
+            self.send_email(recipient, subject, contents_preseved)
     
     # https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/get?utm_source=chatgpt.com
     def get_recent_messages(self, days):

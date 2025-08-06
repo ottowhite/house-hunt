@@ -44,18 +44,24 @@ class Location:
     def __str__(self):
         string = ""
         string += "-------------- ADDRESS ------------------\n"
+        string += "\n"
         string += self.address + "\n"
         string += "\n"
-        string += "Google Maps: " + self.get_google_maps_link() + "\n"
-        string += "Rightmove: " + self.property_link + "\n"
+        string += "-------------- GOOGLE MAPS ------------------\n"
+        string += "\n"
+        string += self.get_google_maps_link() + "\n"
+        string += "\n"
+        string += "-------------- RIGHTMOVE ------------------\n"
+        string += "\n"
+        string += self.property_link + "\n"
         string += "\n"
         string += "-------------- PRICE PER MONTH ------------------\n"
-        string += "Price per month: " + str(self.price_per_month) + "\n"
+        string += "\n"
+        string += "£" + str(self.price_per_month) + "\n"
         string += "\n"
         string += self.get_commutes_string()
+        string += "\n"
         string += self.get_nearest_shops_string()
-        string += "\n"
-        string += "\n"
 
         return string
 
@@ -77,7 +83,6 @@ class Location:
 
             string += f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes\n"
 
-        string += "\n"
         return string
 
     def get_nearest_shops_string(self):
@@ -87,8 +92,6 @@ class Location:
         for shop_name, minutes_to_walk, distance_km in self.shops:
             padded_shop_name = self.pad_string(shop_name + ":", max_shop_name_length + 1)
             string += f"{padded_shop_name}{minutes_to_walk:>3} minutes ({distance_km:.1f}km)\n"
-        
-        string += "\n"
 
         return string
     
@@ -105,7 +108,10 @@ class Location:
             location = Location(google_api, address, price_per_month, link)
             location.scout(work_locations)
             if not location.violates_criteria():
+                logger.info(f"Adding {location.address} to scouted locations")
                 scouted_locations.append(location)
+            else:
+                logger.info(f"Skipping {location.address} because it violates criteria")
 
         return scouted_locations
 
@@ -116,6 +122,6 @@ class Location:
         for location in scouted_locations:
             location_strs.append(str(location))
 
-        return "\n\n".join(location_strs)
+        return "\n\n\n".join(location_strs)
 
 
