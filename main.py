@@ -1,4 +1,5 @@
 import argparse
+import pickle
 from Location import Location
 from GoogleApi import GoogleApi
 from EmailClient import EmailClient
@@ -35,6 +36,7 @@ def main():
         (symbolica_address, "BICYCLE", "Charlie", 45),
         (symbolica_address, "TRANSIT", "Charlie", 45)
     ]
+    run_interval_hours = 4
 
     if args.specific_address:
         location = Location(api, args.specific_address, -1, "???")
@@ -42,19 +44,22 @@ def main():
         logger.info(location)
     else:
         if not args.force_run:
-            with open("last_run_date.txt", "r") as f:
-                last_run_date_str = f.readlines()[0].strip()
-        
-            last_run_date = datetime.strptime(last_run_date_str, "%Y-%m-%d")
-            time_since_last_run = datetime.now().date() - last_run_date.date()
-            if time_since_last_run < timedelta(days=1):
-                logger.info("Already ran today, skipping.")
+            if os.path.exists("last_run_date.pickle"):
+                with open("last_run_date.pickle", "rb") as f:
+                    last_run_date = pickle.load(f)
+            else:
+                # Make date arbitrarily old
+                last_run_date = datetime.now() - timedelta(days=1000)
+
+            time_since_last_run = datetime.now() - last_run_date
+            if time_since_last_run < timedelta(hours=run_interval_hours):
+                logger.info(f"Already within the last {run_interval_hours} hours, skipping.")
                 exit(0)
-            logger.info("Hasn't run for a day, running again.")
+            logger.info(f"Hasn't run for {run_interval_hours} hours, running again.")
 
         # Retrieve the last day of emails from the email client
         client = EmailClient("otto.white.apps@gmail.com")
-        messages = client.get_recent_messages(1)
+        messages = client.get_recent_messages(f"{run_interval_hours}h")
         properties = extract_properties_from_messages(messages, client)
         scouted_locations = Location.scout_locations(api, work_locations, properties)
 
@@ -68,14 +73,13 @@ def main():
             else:
                 all_locations_str = Location.to_big_string(scouted_locations)
                 client.send_email_multiple_recipients(
-                    # ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
-                    ["otto.white20@imperial.ac.uk"],
+                    ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
                     f"Potential new houses {todays_date}",
                     all_locations_str)
 
             # Only prevent more runs if we have already sent an email
-            with open("last_run_date.txt", "w") as f:
-                f.write(datetime.now().strftime("%Y-%m-%d"))
+            with open("last_run_date.pickle", "wb") as f:
+                pickle.dump(datetime.now(), f)
 
 
 if __name__ == "__main__":
