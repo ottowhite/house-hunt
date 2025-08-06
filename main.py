@@ -141,11 +141,11 @@ def main():
     symbolica_address = "66 City Rd, London EC1Y 1BD"
 
     work_locations = [
-        (pdt_address, "TRANSIT", "Robbie", 30),
-        (imperial_address, "BICYCLE", "Otto", 30),
-        (imperial_address, "TRANSIT", "Otto", 30),
-        (symbolica_address, "BICYCLE", "Charlie", 30),
-        (symbolica_address, "TRANSIT", "Charlie", 30)
+        (pdt_address, "TRANSIT", "Robbie", 36),
+        (imperial_address, "BICYCLE", "Otto", 36),
+        (imperial_address, "TRANSIT", "Otto", 36),
+        (symbolica_address, "BICYCLE", "Charlie", 45),
+        (symbolica_address, "TRANSIT", "Charlie", 45)
     ]
 
     if args.specific_address:
