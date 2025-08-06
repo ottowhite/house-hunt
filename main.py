@@ -68,8 +68,9 @@ def main():
                 print(location)
         else:
             todays_date = datetime.now().strftime("%Y/%m/%d")
+
             if len(scouted_locations) == 0:
-                logger.info("No new houses found")
+                logger.info(f"No new properties found in the last {run_interval_hours}h.")
             else:
                 all_locations_str = Location.to_big_string(scouted_locations)
                 client.send_email_multiple_recipients(
