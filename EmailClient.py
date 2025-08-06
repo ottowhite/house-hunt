@@ -39,6 +39,7 @@ class EmailClient:
         except Exception as e:
             logger.error(f"Error sending email to {to}: {e}")
     
+    # TODO: Use the native multiple recipients functionality so I can see who received it on my own email client
     def send_email_multiple_recipients(self, recipients, subject, contents):
         for recipient in recipients:
             contents_preseved = "<pre>\n" + contents + "\n</pre>"

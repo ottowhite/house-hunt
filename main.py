@@ -73,7 +73,7 @@ def main():
             else:
                 all_locations_str = Location.to_big_string(scouted_locations)
                 client.send_email_multiple_recipients(
-                    ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
+                    ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com", "robbiesbuxton@gmail.com"],
                     f"Potential new houses {todays_date}",
                     all_locations_str)
 
