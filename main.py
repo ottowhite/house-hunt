@@ -1,5 +1,6 @@
-import requests
 import argparse
+from Location import Location
+from GoogleApi import GoogleApi
 from EmailClient import EmailClient
 from email_extractor import extract_properties_from_messages
 from dotenv import load_dotenv
@@ -9,120 +10,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
-
-class GoogleApi:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.places_url = "https://places.googleapis.com/v1/places:searchText"
-        self.routes_url = "https://routes.googleapis.com/directions/v2:computeRoutes"
-        self.headers = lambda field_mask: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": self.api_key,
-            "X-Goog-FieldMask": field_mask
-        }
     
-    def get_places(self, text_query):
-        data = {
-            "textQuery": text_query
-        }
-
-        response = requests.post(self.places_url, headers=self.headers("places.displayName,places.formattedAddress"), json=data)
-        return response.json()["places"]
-
-    def get_travel_time_and_distance(self, origin_address, destination_address, transport_mode):
-        # Transit is public transport
-        assert transport_mode in ["BICYCLE", "DRIVE", "WALK", "TRANSIT"], "Invalid transport mode"
-
-        next_monday_datetime = datetime.now() + timedelta(days=(7 - datetime.now().weekday()))
-        next_monday_datetime = next_monday_datetime.replace(hour=8, minute=0, second=0, microsecond=0)
-        departure_time = next_monday_datetime.isoformat() + "Z"
-
-        data = {
-            "origin": {
-                "address": origin_address,
-            },
-            "destination": {
-                "address": destination_address,
-            },
-            "travelMode": transport_mode,
-            "departureTime": departure_time
-        }
-
-        response = requests.post(self.routes_url, headers=self.headers("routes.duration,routes.distanceMeters"), json=data)
-        seconds_str = response.json()["routes"][0]["duration"]
-        distance_meters_str = response.json()["routes"][0]["distanceMeters"]
-        # Remove the s from the end and parse to int
-        seconds = int(seconds_str[:-1])
-        minutes = seconds // 60
-        distance_km = int(distance_meters_str) / 1000
-
-        return minutes, distance_km
-    
-    def get_commutes_string(self, home_address, work_locations):
-        string = "--------------- COMMUTES -----------------\n"
-        transport_mode_pretty = {"BICYCLE": "cycle", "DRIVE": "drive", "WALK": "walk", "TRANSIT": "public transport"}
-        for destination_location, transport_mode, name, maximum_transport_time in work_locations:
-            minutes_to_travel, _ = self.get_travel_time_and_distance(home_address, destination_location, transport_mode)
-
-            padded_person_name = self.pad_string(f"{name}:", 9)
-            padded_transport_mode = self.pad_string(f"({transport_mode_pretty[transport_mode]}):", 20)
-
-            if minutes_to_travel <= maximum_transport_time:
-                string += f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes\n"
-            else:
-                extra_minutes = minutes_to_travel - maximum_transport_time
-                transport_mode_verb = {"BICYCLE": "cycling", "DRIVE": "driving", "WALK": "walking", "TRANSIT": "on public transport"}
-                string += f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes ({extra_minutes} extra minutes {transport_mode_verb[transport_mode]})\n"
-            
-        string += "\n"
-        
-        return string
-    
-    def get_nearest_shops_string(self, home_address):
-        string = "--------------- NEAREST SHOPS -----------------\n"
-        shops = self.get_places(f"Shops and supermarkets near {home_address}")
-        max_shop_name_length = max(len(shop['displayName']['text']) for shop in shops[:5])
-
-        shops_to_print = []
-        for shop in shops[:5]:
-            minutes_to_walk, distance_km = self.get_travel_time_and_distance(home_address, shop["formattedAddress"], "WALK")
-            shops_to_print.append((shop['displayName']['text'], minutes_to_walk, distance_km))
-
-        shops_to_print.sort(key=lambda x: x[1])
-
-        for shop_name, minutes_to_walk, distance_km in shops_to_print:
-            padded_shop_name = self.pad_string(shop_name + ":", max_shop_name_length + 1)
-            string += f"{padded_shop_name}{minutes_to_walk:>3} minutes ({distance_km:.1f}km)\n"
-        
-        string += "\n"
-
-        return string
-    
-    def get_google_maps_link(self, address):
-        address = address.replace(" ", "+")
-        return f"https://www.google.com/maps/search/{address}"
-    
-    def scout_location(self, new_house_address, work_locations, price_per_month, link):
-        string = ""
-        string += "-------------- ADDRESS ------------------\n"
-        string += new_house_address + "\n"
-        string += "\n"
-        string += "Google Maps: " + self.get_google_maps_link(new_house_address) + "\n"
-        string += "Rightmove: " + link + "\n"
-        string += "\n"
-        string += "-------------- PRICE PER MONTH ------------------\n"
-        string += "Price per month: " + str(price_per_month) + "\n"
-        string += "\n"
-        string += self.get_commutes_string(new_house_address, work_locations)
-        string += self.get_nearest_shops_string(new_house_address)
-        string += "\n"
-        string += "\n"
-        return string
-    
-    @staticmethod
-    def pad_string(string, length):
-        return string + " " * (length - len(string)) if len(string) < length else string
-
 def main():
     # add argument for new address
     parser = argparse.ArgumentParser()
@@ -141,7 +29,7 @@ def main():
     symbolica_address = "66 City Rd, London EC1Y 1BD"
 
     work_locations = [
-        (pdt_address, "TRANSIT", "Robbie", 36),
+        (pdt_address, "TRANSIT", "Robbie", 40),
         (imperial_address, "BICYCLE", "Otto", 36),
         (imperial_address, "TRANSIT", "Otto", 36),
         (symbolica_address, "BICYCLE", "Charlie", 45),
@@ -149,8 +37,9 @@ def main():
     ]
 
     if args.specific_address:
-        scouted_location = api.scout_location(args.specific_address, work_locations, -1, "???")
-        logger.info(scouted_location)
+        location = Location(api, args.specific_address, -1, "???")
+        location.scout(work_locations)
+        logger.info(location)
     else:
         if not args.force_run:
             with open("last_run_date.txt", "r") as f:
@@ -163,34 +52,25 @@ def main():
                 exit(0)
             logger.info("Hasn't run for a day, running again.")
 
-
         # Retrieve the last day of emails from the email client
         client = EmailClient("otto.white.apps@gmail.com")
         messages = client.get_recent_messages(1)
         properties = extract_properties_from_messages(messages, client)
-        seen_addresses = set()
-
-		# Scout each location on a rightmove email
-        scouted_locations = ""
-        for address, price_per_month, link in properties:
-            if address in seen_addresses:
-                logger.info(f"Skipping {address} because it has already been processed.")
-                continue
-            seen_addresses.add(address)
-
-            scouted_locations += api.scout_location(address, work_locations, price_per_month, link)
+        scouted_locations = Location.scout_locations(api, work_locations, properties)
 
         if args.print_only:
-            print(scouted_locations)
+            for location in scouted_locations:
+                print(location)
         else:
             todays_date = datetime.now().strftime("%Y/%m/%d")
-            if scouted_locations == "":
+            if len(scouted_locations) == 0:
                 logger.info("No new houses found")
             else:
+                all_locations_str = Location.to_big_string(scouted_locations)
                 client.send_email_multiple_recipients(
                     ["otto.white20@imperial.ac.uk", "charlie.lidbury@icloud.com"],
                     f"Potential new houses {todays_date}",
-                    scouted_locations)
+                    all_locations_str)
 
             # Only prevent more runs if we have already sent an email
             with open("last_run_date.txt", "w") as f:
