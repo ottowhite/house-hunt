@@ -8,6 +8,7 @@ import os
 import pathlib
 from email_extractor import extract_properties_from_messages
 import logging
+from requests import Request
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -64,8 +65,18 @@ class EmailClient:
                 creds = pickle.load(token)
             
             if not creds.valid:
-                logger.info("Gmail token is invalid (likely expired), creating new one")
-                creds = self.oauth_authenticate()
+                if creds.expired:
+                    logger.info("Gmail token is expired, refreshing...")
+                    try:
+                        creds.refresh(Request())
+                    except Exception as e:
+                        logger.warning(f"Error refreshing gmail token: {e}")
+                        logger.info("Creating new gmail token...")
+                        creds = self.oauth_authenticate()
+                else:
+                    logger.info("Gmail token is invalid, creating new one...")
+                    creds = self.oauth_authenticate()
+
                 with open(google_token_file, 'wb') as token:
                     pickle.dump(creds, token)
         
