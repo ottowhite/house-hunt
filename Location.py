@@ -1,4 +1,5 @@
 import logging
+from LocationConstraint import TravelTime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -10,19 +11,23 @@ class Location:
         self.price_per_month = price_per_month
         self.property_link = property_link
 
-    def scout(self, work_locations):
-        self.scout_commutes(work_locations)
+    def scout(self, location_constraints):
+        self.scout_travel_times(location_constraints)
         self.scout_nearest_shops()
 
-    def scout_commutes(self, work_locations):
-        self.commutes = []
+    def scout_travel_times(self, location_constraints):
+        self.travel_times = []
         self.total_commute_time = 0
 
-        for destination_location, transport_mode, name, maximum_transport_time in work_locations:
-            minutes_to_travel, _ = self.google_api.get_travel_time_and_distance(self.address, destination_location, transport_mode)
-
-            self.commutes.append((name, transport_mode, minutes_to_travel, maximum_transport_time))
-            self.total_commute_time += minutes_to_travel
+        for location_constraint in location_constraints:
+            minutes_to_travel, _ = self.google_api.get_travel_time_and_distance(
+                self.address,
+                location_constraint.target_address,
+                location_constraint.transport_mode
+            )
+            travel_time = TravelTime(location_constraint, minutes_to_travel)
+            self.travel_times.append(travel_time)
+            self.total_commute_time += travel_time.minutes
 
     def scout_nearest_shops(self):
         places = self.google_api.get_places(f"Shops and supermarkets near {self.address}")
@@ -35,10 +40,10 @@ class Location:
         self.shops.sort(key=lambda x: x[1])
 
     def violates_criteria(self):
-        for name, transport_mode, minutes_to_travel, maximum_transport_time in self.commutes:
-            if minutes_to_travel > maximum_transport_time:
+        for travel_time in self.travel_times:
+            if travel_time.is_violation():
+                logger.info(f"Skipping {self.address} because it violates criteria: {travel_time}")
                 return True
-
         return False
 
     def __str__(self):
@@ -74,14 +79,8 @@ class Location:
     
     def get_commutes_string(self):
         string = "--------------- COMMUTES -----------------\n"
-        transport_mode_pretty = {"BICYCLE": "cycle", "DRIVE": "drive", "WALK": "walk", "TRANSIT": "public transport"}
-
-        for name, transport_mode, minutes_to_travel, maximum_transport_time in self.commutes:
-
-            padded_person_name = self.pad_string(f"{name}:", 9)
-            padded_transport_mode = self.pad_string(f"({transport_mode_pretty[transport_mode]}):", 20)
-
-            string += f"{padded_person_name}Home -> Work {padded_transport_mode} {minutes_to_travel} minutes\n"
+        for travel_time in self.travel_times:
+            string += f"{travel_time}\n"
 
         return string
 
@@ -96,7 +95,7 @@ class Location:
         return string
     
     @staticmethod
-    def scout_locations(google_api, work_locations, properties):
+    def scout_locations(google_api, location_constraints, properties):
         scouted_locations = []
         seen_addresses = set()
 
@@ -106,12 +105,10 @@ class Location:
                 continue
             seen_addresses.add(address)
             location = Location(google_api, address, price_per_month, link)
-            location.scout(work_locations)
+            location.scout(location_constraints)
             if not location.violates_criteria():
                 logger.info(f"Adding {location.address} to scouted locations")
                 scouted_locations.append(location)
-            else:
-                logger.info(f"Skipping {location.address} because it violates criteria")
 
         return scouted_locations
 

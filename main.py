@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import os
 import logging
 from math import ceil
+from LocationConstraint import LocationConstraint
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ def get_gmail_date_filter(time_since_last_run):
     hours_since_last_run = ceil(time_since_last_run.seconds / (60 * 60))
     return f"{hours_since_last_run}h"
 
-def scout_and_email_locations(api, work_locations, run_interval_hours, args):
+def scout_and_email_locations(api, location_constraints, run_interval_hours, args):
     last_run_date = get_last_run_date()
     time_since_last_run = datetime.now() - last_run_date # 3 days if last_run_date.pickle was deleted
 
@@ -47,7 +48,7 @@ def scout_and_email_locations(api, work_locations, run_interval_hours, args):
     logger.info(f"Retrieving emails with gmail time filter: {gmail_date_filter}")
     messages = client.get_recent_messages(gmail_date_filter)
     properties = extract_properties_from_messages(messages, client)
-    scouted_locations = Location.scout_locations(api, work_locations, properties)
+    scouted_locations = Location.scout_locations(api, location_constraints, properties)
 
     if args.print_only:
         for location in scouted_locations:
@@ -68,7 +69,7 @@ def scout_and_email_locations(api, work_locations, run_interval_hours, args):
         with open("last_run_date.pickle", "wb") as f:
             pickle.dump(datetime.now(), f)
 
-    
+
 def main():
     # add argument for new address
     parser = argparse.ArgumentParser()
@@ -82,25 +83,65 @@ def main():
     assert api_key is not None, "GOOGLE_HOUSE_HUNT_API_KEY is not set"
     api = GoogleApi(api_key)
 
-    pdt_address = "119, 121 Cannon St, London EC4N 5AT"
-    imperial_address = "Exhibition Rd, South Kensington, London SW7 2AZ"
-    symbolica_address = "66 City Rd, London EC1Y 1BD"
-
-    work_locations = [
-        (pdt_address, "TRANSIT", "Robbie", 40),
-        (imperial_address, "BICYCLE", "Otto", 36),
-        (imperial_address, "TRANSIT", "Otto", 36),
-        (symbolica_address, "BICYCLE", "Charlie", 45),
-        (symbolica_address, "TRANSIT", "Charlie", 45)
+    location_constraints = [
+        LocationConstraint(
+            person_name="Robbie",
+            max_transport_minutes=40,
+            transport_mode="TRANSIT",
+            target_name="PDT",
+            target_address="119, 121 Cannon St, London EC4N 5AT"
+        ),
+        LocationConstraint(
+            person_name="Otto",
+            max_transport_minutes=37,
+            transport_mode="BICYCLE",
+            target_name="Imperial",
+            target_address="Exhibition Rd, South Kensington, London SW7 2AZ"
+        ),
+        LocationConstraint(
+            person_name="Otto",
+            max_transport_minutes=40,
+            transport_mode="TRANSIT",
+            target_name="Imperial",
+            target_address="Exhibition Rd, South Kensington, London SW7 2AZ"
+        ),
+        LocationConstraint(
+            person_name="Otto",
+            max_transport_minutes=37,
+            transport_mode="BICYCLE",
+            target_name="Lauren's house",
+            target_address="45 Flowersmead, London"
+        ),
+        LocationConstraint(
+            person_name="Otto",
+            max_transport_minutes=40,
+            transport_mode="TRANSIT",
+            target_name="Lauren's house",
+            target_address="45 Flowersmead, London"
+        ),
+        LocationConstraint(
+            person_name="Charlie",
+            max_transport_minutes=45,
+            transport_mode="BICYCLE",
+            target_name="Symbolica",
+            target_address="66 City Rd, London EC1Y 1BD"
+        ),
+        LocationConstraint(
+            person_name="Charlie",
+            max_transport_minutes=45,
+            transport_mode="TRANSIT",
+            target_name="Symbolica",
+            target_address="66 City Rd, London EC1Y 1BD"
+        )
     ]
 
     if args.specific_address:
         location = Location(api, args.specific_address, -1, "???")
-        location.scout(work_locations)
+        location.scout(location_constraints)
         logger.info(location)
     else:
         run_interval_hours = 4
-        scout_and_email_locations(api, work_locations, run_interval_hours, args)
+        scout_and_email_locations(api, location_constraints, run_interval_hours, args)
 
 
 if __name__ == "__main__":
